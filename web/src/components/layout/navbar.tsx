@@ -94,7 +94,7 @@ export default function Navbar() {
         </div>
         <div className="navbar-end">
           <div className="px-5">
-            <ConnectButton></ConnectButton>
+            <ConnectButton />
           </div>
           <label className="swap swap-rotate">
             <input type="checkbox" checked={isdark} onChange={toggleDarkMode} />
