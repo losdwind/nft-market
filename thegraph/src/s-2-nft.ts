@@ -1,10 +1,11 @@
 import {
   Approval as ApprovalEvent,
   ApprovalForAll as ApprovalForAllEvent,
-  Transfer as TransferEvent,
-} from "../generated/S2NFT/S2NFT"
+  Transfer as TransferEvent,S2NFT
+} from "../generated/templates/S2NFT/S2NFT"
+
 import { Approval, ApprovalForAll, Transfer, TokenInfo } from "../generated/schema"
-import { S2NFT } from "../generated/S2NFT/S2NFT"
+
 
 export function handleApproval(event: ApprovalEvent): void {
   let entity = new Approval(
@@ -55,42 +56,27 @@ export function handleTransfer(event: TransferEvent): void {
 
 }
 
-
-// type TokenInfo @entity {
-//   id: ID!
-//   ca: Bytes! # address
-//   tokenId: BigInt! # uint256
-//   tokenURL: String!
-//   name: String!
-//   owner: Bytes! # address
-//   blockNumber: BigInt!
-//   blockTimestamp: BigInt!
-//   transactionHash: Bytes!
-// }
-
-function tokenInfo(event: TransferEvent) {
-
-  // initialize s2nf contract to read name and tokenURL
+export function tokenInfo(event: TransferEvent): void {
   let contract = S2NFT.bind(event.address)
-
-  // prepare data
-  let nftName = contract.name()
   let tokenId = event.params.tokenId
-  let tokenURI = contract.tokenURI(tokenId)
-  let tokenInfo = new TokenInfo(
-    event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString(),
-  )
+  let id = event.address.toHexString() + '-' + tokenId.toHexString()  
 
-  // save data
-  tokenInfo.ca = event.address,
-  tokenInfo.tokenId = tokenId,
-  tokenInfo.tokenURL = tokenURI,
-  tokenInfo.name = nftName,
-  tokenInfo.owner = event.params.to,
-  tokenInfo.blockNumber = event.block.number,
-  tokenInfo.blockTimestamp = event.block.timestamp,
+  // check if the nft was owned by other address
+  let tokenInfo = TokenInfo.load(id)
+  if(!tokenInfo){
+    tokenInfo = new TokenInfo(id)
+    // prepare new data
+    let nftName = contract.name()
+    let tokenURI = contract.tokenURI(tokenId)
+    tokenInfo.ca = event.address
+    tokenInfo.tokenId = tokenId
+    tokenInfo.tokenURL = tokenURI
+    tokenInfo.name = nftName
+  }
+  // prepare new or replace old data
+  tokenInfo.owner = event.params.to
+  tokenInfo.blockNumber = event.block.number
+  tokenInfo.blockTimestamp = event.block.timestamp
   tokenInfo.transactionHash = event.transaction.hash
-
-  tokenInfo.save();
+  tokenInfo.save()
 }
-
